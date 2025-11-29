@@ -1,50 +1,135 @@
-# Welcome to your Expo app 👋
+# Edge Memory Protocol
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+An open standard for sharing AI memory across mobile applications.
 
-## Get started
+## Overview
 
-1. Install dependencies
+The Edge Memory Protocol (EMP) enables multiple apps from different developers to share a common memory store on mobile devices. All data stays local on the device, giving users complete control over their AI memory.
 
-   ```bash
-   npm install
-   ```
+## Project Structure
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+edge-memory/
+├── spec/                    # Protocol specification
+│   └── v1.0/
+│       ├── specification.md # Full protocol documentation
+│       ├── schema.json      # JSON Schema for validation
+│       └── examples.jsonl   # Example memory entries
+├── sdk/                     # Reference SDK implementation
+│   ├── src/
+│   │   ├── types.ts         # TypeScript type definitions
+│   │   ├── validation.ts    # Entry validation
+│   │   ├── lock.ts          # File locking
+│   │   ├── MemoryStore.ts   # Core memory store
+│   │   ├── platform/
+│   │   │   └── expo.ts      # Expo/React Native platform handler
+│   │   └── index.ts         # Public API
+│   └── package.json
+└── app/                     # Example application (coming soon)
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Quick Start
 
-## Learn more
+### 1. Install Dependencies
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+npm install
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### 2. Read the Specification
 
-## Join the community
+Start with the [protocol specification](./spec/v1.0/specification.md) to understand the standard.
 
-Join our community of developers creating universal apps.
+### 3. Use the SDK
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```typescript
+import { createMemoryStore } from './sdk/src';
+
+const memory = createMemoryStore({
+  appId: 'com.yourcompany.yourapp',
+  debug: true,
+});
+
+// Initialize (requests user permission)
+await memory.setup();
+await memory.initialize();
+
+// Write a memory
+await memory.write({
+  content: 'User prefers dark mode',
+  type: 'preference',
+  tags: ['ui', 'theme'],
+});
+
+// Read memories
+const recent = await memory.read({
+  since: Date.now() - 7 * 24 * 60 * 60 * 1000, // Last 7 days
+});
+
+console.log(recent);
+```
+
+## Key Features
+
+- **Local-First**: All data stays on device
+- **Cross-App**: Multiple apps can share the same memory
+- **Privacy-Preserving**: User controls all access
+- **Simple Format**: JSONL (JSON Lines) for easy parsing
+- **Platform-Native**: Uses iOS Files app and Android storage
+- **Open Standard**: Any developer can implement
+
+## Platform Support
+
+- **iOS**: Via Files app with security-scoped bookmarks
+- **Android**: Via standard Documents folder or Storage Access Framework
+- **React Native**: Reference implementation provided
+- **Native**: Implement the spec in Swift/Kotlin
+
+## Documentation
+
+- [Protocol Specification](./spec/v1.0/specification.md)
+- [JSON Schema](./spec/v1.0/schema.json)
+- [Example Entries](./spec/v1.0/examples.jsonl)
+
+## Development
+
+### Build SDK
+
+```bash
+cd sdk
+npm install
+npm run build
+```
+
+### Run Example App
+
+```bash
+npm start
+```
+
+## Contributing
+
+This is an open standard. Contributions welcome:
+
+1. Protocol improvements (submit proposals)
+2. SDK enhancements
+3. Platform implementations (Swift, Kotlin, etc.)
+4. Example applications
+5. Documentation improvements
+
+## License
+
+- **Protocol Specification**: CC0 1.0 Universal (Public Domain)
+- **Reference SDK**: MIT License
+
+## Roadmap
+
+- [x] Protocol specification v1.0
+- [x] TypeScript/React Native SDK
+- [ ] Example chat application
+- [ ] Example notes application
+- [ ] Swift SDK for native iOS
+- [ ] Kotlin SDK for native Android
+- [ ] Embedding/vector search support
+- [ ] Encryption helpers
+- [ ] Protocol v2.0 (compression, archival)
