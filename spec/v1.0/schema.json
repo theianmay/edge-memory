@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://edgememory.org/schemas/v1.0/entry.json",
+  "title": "Edge Memory Entry",
+  "description": "A single memory entry in the Edge Memory Protocol v1.0",
+  "type": "object",
+  "required": ["v", "id", "ts", "src", "content"],
+  "properties": {
+    "v": {
+      "type": "string",
+      "description": "Protocol version number",
+      "pattern": "^\\d+\\.\\d+$",
+      "examples": ["1.0"]
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique identifier (UUID v4)",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "examples": ["550e8400-e29b-41d4-a716-446655440000"]
+    },
+    "ts": {
+      "type": "number",
+      "description": "Unix timestamp in milliseconds",
+      "minimum": 0,
+      "examples": [1701234567890]
+    },
+    "src": {
+      "type": "string",
+      "description": "Source application in reverse domain notation",
+      "pattern": "^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)+$",
+      "examples": ["com.example.app", "org.company.product"]
+    },
+    "content": {
+      "type": "string",
+      "description": "The memory content",
+      "minLength": 1,
+      "examples": ["User prefers dark mode"]
+    },
+    "type": {
+      "type": "string",
+      "description": "Memory type for categorization",
+      "examples": ["preference", "fact", "event", "conversation", "note"]
+    },
+    "tags": {
+      "type": "array",
+      "description": "Tags for filtering and search",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9:_-]+$"
+      },
+      "uniqueItems": true,
+      "examples": [["ui", "theme"], ["person:john", "calendar"]]
+    },
+    "meta": {
+      "type": "object",
+      "description": "App-specific metadata",
+      "additionalProperties": true,
+      "examples": [
+        {"priority": "high"},
+        {"location": "home", "confidence": 0.95}
+      ]
+    },
+    "emb": {
+      "type": "array",
+      "description": "Embedding vector for semantic search",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 1,
+      "examples": [[0.123, 0.456, 0.789]]
+    }
+  },
+  "additionalProperties": false
+}
