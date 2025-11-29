@@ -26,7 +26,18 @@ export default function MemoriesScreen() {
 
   const loadMemories = async () => {
     try {
-      await memory.initialize();
+      // Try to initialize if not already
+      try {
+        const isReady = await memory.isReady();
+        if (!isReady) {
+          await memory.setup();
+        }
+        await memory.initialize();
+      } catch (initError: any) {
+        console.log('Memory not initialized:', initError.message);
+        setMemories([]);
+        return;
+      }
       
       const filterOptions = filter === 'all' 
         ? {} 
@@ -34,8 +45,10 @@ export default function MemoriesScreen() {
       
       const data = await memory.read(filterOptions);
       setMemories(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load memories:', error);
+      Alert.alert('Error', `Could not load memories: ${error.message || 'Unknown error'}`);
+      setMemories([]);
     }
   };
 

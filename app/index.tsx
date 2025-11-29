@@ -39,41 +39,82 @@ export default function Index() {
   }, []);
 
   const initializeApp = async () => {
+    let memoryInitialized = false;
+    
     try {
-      // Setup memory
+      // Setup memory with better error handling
       const memory = memoryRef.current;
-      const hasAccess = await memory.isReady();
       
-      if (!hasAccess) {
-        const granted = await memory.setup();
-        if (!granted) {
-          Alert.alert('Permission Required', 'Memory features require folder access');
-          return;
+      try {
+        const hasAccess = await memory.isReady();
+        
+        if (!hasAccess) {
+          const granted = await memory.setup();
+          if (!granted) {
+            console.log('Memory access not granted, continuing without persistence');
+            Alert.alert(
+              'Limited Mode',
+              'Memory features require folder access. App will work but memories won\'t persist.',
+              [{ text: 'OK' }]
+            );
+          } else {
+            await memory.initialize();
+            memoryInitialized = true;
+          }
+        } else {
+          await memory.initialize();
+          memoryInitialized = true;
         }
+        
+        if (memoryInitialized) {
+          await updateMemoryStats();
+        }
+      } catch (memError: any) {
+        console.error('Memory initialization error:', memError);
+        Alert.alert(
+          'Memory Error',
+          `Could not initialize memory: ${memError.message || 'Unknown error'}. Continuing without persistence.`,
+          [{ text: 'OK' }]
+        );
       }
 
-      await memory.initialize();
+      // Always set ready so app can be used
       setIsMemoryReady(true);
-      
-      // Load memory stats
-      await updateMemoryStats();
 
       // Download Cactus model if needed
-      if (!cactusLM.isDownloaded) {
-        Alert.alert('Downloading Model', 'Cactus LLM is downloading...');
-        await cactusLM.download();
+      try {
+        if (!cactusLM.isDownloaded) {
+          console.log('Downloading Cactus model...');
+          await cactusLM.download();
+        }
+      } catch (cactusError: any) {
+        console.error('Cactus download error:', cactusError);
+        Alert.alert(
+          'Model Download Failed',
+          `Could not download Cactus model: ${cactusError.message || 'Unknown error'}`,
+          [{ text: 'OK' }]
+        );
       }
 
       // Add welcome message
+      const welcomeMsg = memoryInitialized
+        ? '🧠 Memory-enabled chat ready! Your preferences and context are remembered across sessions.'
+        : '💬 Chat ready! Note: Memory persistence is disabled.';
+      
       setMessages([{
         role: 'system',
-        content: '🧠 Memory-enabled chat ready! Your preferences and context are remembered across sessions.',
+        content: welcomeMsg,
         timestamp: Date.now(),
       }]);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Initialization failed:', error);
-      Alert.alert('Error', 'Failed to initialize app');
+      setIsMemoryReady(true); // Still allow app to be used
+      Alert.alert(
+        'Initialization Error',
+        `App started with limited features: ${error.message || 'Unknown error'}`,
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -130,35 +171,52 @@ export default function Index() {
       if (userMessage.toLowerCase().includes('prefer') || 
           userMessage.toLowerCase().includes('like') ||
           userMessage.toLowerCase().includes('want')) {
-        await memory.write({
-          content: `User preference: ${userMessage}`,
-          type: 'preference',
-          tags: ['conversation', 'preference'],
-        });
+        try {
+          await memory.write({
+            content: `User preference: ${userMessage}`,
+            type: 'preference',
+            tags: ['conversation', 'preference'],
+          });
+        } catch (writeError) {
+          console.log('Could not write preference memory:', writeError);
+        }
       }
 
       // Detect facts about user
       if (userMessage.toLowerCase().includes('i am') || 
           userMessage.toLowerCase().includes("i'm") ||
           userMessage.toLowerCase().includes('my name is')) {
-        await memory.write({
-          content: `User info: ${userMessage}`,
-          type: 'fact',
-          tags: ['conversation', 'personal'],
-        });
+        try {
+          await memory.write({
+            content: `User info: ${userMessage}`,
+            type: 'fact',
+            tags: ['conversation', 'personal'],
+          });
+        } catch (writeError) {
+          console.log('Could not write fact memory:', writeError);
+        }
       }
 
       // Store conversation context
-      await memory.write({
-        content: `Conversation: User said "${userMessage.substring(0, 100)}"`,
-        type: 'conversation',
-        tags: ['chat'],
-        meta: { response: aiResponse.substring(0, 100) },
-      });
+      try {
+        await memory.write({
+          content: `Conversation: User said "${userMessage.substring(0, 100)}"`,
+          type: 'conversation',
+          tags: ['chat'],
+          meta: { response: aiResponse.substring(0, 100) },
+        });
+      } catch (writeError) {
+        console.log('Could not write conversation memory:', writeError);
+      }
 
-      await updateMemoryStats();
+      try {
+        await updateMemoryStats();
+      } catch (statsError) {
+        console.log('Could not update memory stats:', statsError);
+      }
     } catch (error) {
       console.error('Failed to extract memories:', error);
+      // Don't show alert - this is background operation
     }
   };
 
