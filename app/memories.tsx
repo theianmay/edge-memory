@@ -16,7 +16,7 @@ export default function MemoriesScreen() {
   const [filter, setFilter] = useState<'all' | 'preference' | 'fact' | 'conversation'>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [memory] = useState(() => createMemoryStore({
-    appId: 'com.example.empchat',
+    appId: 'com.caesiusbay.empchat',
     debug: true,
   }));
 

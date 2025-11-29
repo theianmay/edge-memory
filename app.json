@@ -9,11 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "bundleIdentifier": "com.example.edgememory",
+      "bundleIdentifier": "com.caesiusbay.empchat",
       "supportsTablet": true
     },
     "android": {
-      "package": "com.example.edgememory",
+      "package": "com.caesiusbay.empchat",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

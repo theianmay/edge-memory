@@ -1,16 +1,16 @@
 import { useCactusLM } from 'cactus-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { createMemoryStore } from '../sdk/src';
 
@@ -29,7 +29,7 @@ export default function Index() {
   
   const cactusLM = useCactusLM();
   const memoryRef = useRef(createMemoryStore({
-    appId: 'com.example.empchat',
+    appId: 'com.caesiusbay.empchat',
     debug: true,
   }));
 
