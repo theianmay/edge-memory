@@ -4,7 +4,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 import { AccessDeniedError, PlatformAccessHandler } from '../types';
 
@@ -41,7 +41,8 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
 
       // Try to access the file to verify permission is still valid
       const filePath = await this.getFilePath();
-      const info = await FileSystem.getInfoAsync(filePath);
+      const file = new File(filePath);
+      file.exists;
       
       return true; // If we got here, we have access
     } catch (error) {
@@ -65,9 +66,11 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
 
   async readFile(path: string): Promise<string> {
     try {
-      return await FileSystem.readAsStringAsync(path, {
-        encoding: 'utf8',
-      });
+      const file = new File(path);
+      if (!file.exists) {
+        return '';
+      }
+      return await file.text();
     } catch (error) {
       if ((error as any).code === 'ENOENT') {
         // File doesn't exist, return empty string
@@ -80,26 +83,24 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
   async appendFile(path: string, content: string): Promise<void> {
     // Expo doesn't have native append, so we read + write
     const existing = await this.readFile(path);
-    await FileSystem.writeAsStringAsync(path, existing + content, {
-      encoding: 'utf8',
-    });
+    const file = new File(path);
+    await file.write(existing + content);
   }
 
   async writeFile(path: string, content: string): Promise<void> {
-    await FileSystem.writeAsStringAsync(path, content, {
-      encoding: 'utf8',
-    });
+    const file = new File(path);
+    await file.write(content);
   }
 
   async fileExists(path: string): Promise<boolean> {
-    const info = await FileSystem.getInfoAsync(path);
-    return info.exists;
+    const file = new File(path);
+    return file.exists;
   }
 
   async ensureDirectory(path: string): Promise<void> {
-    const info = await FileSystem.getInfoAsync(path);
-    if (!info.exists) {
-      await FileSystem.makeDirectoryAsync(path, { intermediates: true });
+    const dir = new Directory(path);
+    if (!dir.exists) {
+      await dir.create();
     }
   }
 
@@ -148,7 +149,7 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
     }
 
     // Use standard Documents location
-    const documentsDir = FileSystem.documentDirectory;
+    const documentsDir = Paths.document.uri;
     return `${documentsDir}${STANDARD_FOLDER}/${STANDARD_FILE}`;
   }
 
@@ -158,7 +159,7 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
       // or ask user to pick a folder
 
       // Option 1: Use standard location (simpler)
-      const documentsDir = FileSystem.documentDirectory;
+      const documentsDir = Paths.document.uri;
       const edgeMemoryDir = `${documentsDir}${STANDARD_FOLDER}`;
       
       await this.ensureDirectory(edgeMemoryDir);
