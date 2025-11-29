@@ -85,8 +85,12 @@ export default function MemoriesScreen() {
   const exportMemories = async () => {
     try {
       const exported = await memory.export();
-      Alert.alert('Export', `Exported ${memories.length} memories to console`);
-      console.log('Exported memories:', exported);
+      Alert.alert(
+        'Exported to Console',
+        `${memories.length} memories exported as JSON.\nCheck the console/logs to view.`,
+        [{ text: 'OK' }]
+      );
+      console.log('📋 Exported memories (JSON):', exported);
     } catch (error) {
       Alert.alert('Error', 'Failed to export memories');
     }
@@ -126,7 +130,7 @@ export default function MemoriesScreen() {
             onPress={exportMemories}
             activeOpacity={0.7}
           >
-            <Text style={styles.exportButtonText}>Export</Text>
+            <Text style={styles.exportButtonText}>📋 Export JSON</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
