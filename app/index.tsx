@@ -13,6 +13,7 @@ import {
     View,
 } from 'react-native';
 import { createMemoryStore } from '../sdk/src';
+import { colors, radius, shadows, spacing, typography } from './theme';
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -300,7 +301,7 @@ export default function Index() {
   if (cactusLM.isDownloading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.accent.primary} />
         <Text style={styles.loadingText}>
           Downloading Cactus Model: {Math.round(cactusLM.downloadProgress * 100)}%
         </Text>
@@ -311,7 +312,7 @@ export default function Index() {
   if (!isMemoryReady) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.accent.primary} />
         <Text style={styles.loadingText}>Initializing Memory...</Text>
       </View>
     );
@@ -392,31 +393,32 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.bg.primary,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.bg.primary,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.lg,
+    fontSize: typography.base,
+    color: colors.text.secondary,
   },
   header: {
-    backgroundColor: '#FFF',
+    backgroundColor: colors.bg.secondary,
     paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.border.subtle,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontSize: typography.xxl,
+    fontWeight: typography.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -424,91 +426,95 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   statsText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: typography.sm,
+    color: colors.text.secondary,
   },
   clearButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    backgroundColor: '#FF3B30',
-    borderRadius: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.error,
+    borderRadius: radius.sm,
   },
   clearButtonText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.text.primary,
+    fontSize: typography.sm,
+    fontWeight: typography.semibold,
   },
   messagesContainer: {
     flex: 1,
-    padding: 16,
+    padding: spacing.lg,
   },
   messageBubble: {
     maxWidth: '80%',
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 12,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    marginBottom: spacing.md,
+    ...shadows.sm,
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.accent.primary,
   },
   assistantBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FFF',
+    backgroundColor: colors.bg.secondary,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border.subtle,
   },
   systemBubble: {
     alignSelf: 'center',
-    backgroundColor: '#FFF3CD',
+    backgroundColor: colors.accent.subtle,
     borderWidth: 1,
-    borderColor: '#FFE69C',
+    borderColor: colors.accent.primary + '40',
   },
   messageText: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: typography.base,
+    lineHeight: typography.base * typography.normal,
   },
   userText: {
-    color: '#FFF',
+    color: colors.text.primary,
   },
   assistantText: {
-    color: '#000',
+    color: colors.text.primary,
   },
   timestamp: {
-    fontSize: 10,
-    color: '#999',
-    marginTop: 4,
+    fontSize: typography.xs,
+    color: colors.text.tertiary,
+    marginTop: spacing.xs,
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#FFF',
+    padding: spacing.lg,
+    backgroundColor: colors.bg.secondary,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: colors.border.subtle,
   },
   input: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 16,
+    backgroundColor: colors.bg.tertiary,
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: typography.base,
+    color: colors.text.primary,
     maxHeight: 100,
-    marginRight: 8,
+    marginRight: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border.default,
   },
   sendButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    backgroundColor: colors.accent.primary,
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
     justifyContent: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: '#CCC',
+    backgroundColor: colors.bg.tertiary,
   },
   sendButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.text.primary,
+    fontSize: typography.base,
+    fontWeight: typography.semibold,
   },
 });
