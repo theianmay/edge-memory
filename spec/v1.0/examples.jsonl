@@ -1,0 +1,10 @@
+{"v":"1.0","id":"550e8400-e29b-41d4-a716-446655440000","ts":1701234567890,"src":"com.example.chat","content":"User prefers dark mode","type":"preference","tags":["ui","theme"]}
+{"v":"1.0","id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","ts":1701234568000,"src":"com.example.notes","content":"Meeting with John on Friday at 2pm","type":"event","tags":["calendar","person:john"],"meta":{"priority":"high","location":"office"}}
+{"v":"1.0","id":"6ba7b811-9dad-11d1-80b4-00c04fd430c8","ts":1701234569000,"src":"com.example.assistant","content":"User asked about weather in San Francisco","type":"conversation"}
+{"v":"1.0","id":"7c9e6679-7425-40de-944b-e07fc1f90ae7","ts":1701234570000,"src":"com.example.chat","content":"User's favorite color is blue","type":"preference","tags":["personal","color"]}
+{"v":"1.0","id":"8d8e6679-8536-41ef-a55c-f18gd2g01bf8","ts":1701234571000,"src":"com.example.notes","content":"John's email is john@example.com","type":"contact","tags":["person:john","email"],"meta":{"verified":true}}
+{"v":"1.0","id":"9e9f7780-9647-42fg-b66d-g29he3h12cg9","ts":1701234572000,"src":"com.example.assistant","content":"User lives in San Francisco","type":"fact","tags":["location","personal"]}
+{"v":"1.0","id":"af0g8891-a758-43gh-c77e-h30if4i23dh0","ts":1701234573000,"src":"com.example.chat","content":"User prefers concise responses","type":"preference","tags":["communication","style"]}
+{"v":"1.0","id":"bg1h9902-b869-44hi-d88f-i41jg5j34ei1","ts":1701234574000,"src":"com.example.notes","content":"Grocery list: milk, eggs, bread","type":"note","tags":["shopping","todo"]}
+{"v":"1.0","id":"ch2i0013-c970-45ij-e99g-j52kh6k45fj2","ts":1701234575000,"src":"com.example.assistant","content":"User mentioned liking jazz music","type":"fact","tags":["music","personal","preference"]}
+{"v":"1.0","id":"di3j1124-d081-46jk-f00h-k63li7l56gk3","ts":1701234576000,"src":"com.example.chat","content":"User has a dog named Max","type":"fact","tags":["personal","pet"],"meta":{"petType":"dog","petName":"Max"}}
