@@ -1,18 +1,19 @@
 import { useCactusLM } from 'cactus-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { createMemoryStore } from '../sdk/src';
+import { getMemoryStore } from './memoryStore';
+import { colors, radius, shadows, spacing, typography } from './theme';
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -28,10 +29,12 @@ export default function Index() {
   const scrollViewRef = useRef<ScrollView>(null);
   
   const cactusLM = useCactusLM();
-  const memoryRef = useRef(createMemoryStore({
-    appId: 'com.caesiusbay.empchat',
-    debug: true,
-  }));
+  
+  // Lazy initialize memory store (singleton) - guaranteed to be set before use
+  const memoryRef = useRef<ReturnType<typeof getMemoryStore>>(null as any);
+  if (!memoryRef.current) {
+    memoryRef.current = getMemoryStore();
+  }
 
   // Initialize memory and Cactus
   useEffect(() => {
@@ -164,51 +167,56 @@ export default function Index() {
 
   const extractMemoriesFromConversation = async (userMessage: string, aiResponse: string) => {
     try {
-      // Simple heuristics to extract memories
       const memory = memoryRef.current;
+      const lowerMessage = userMessage.toLowerCase();
+
+      // Collect all memories to write (avoids lock contention)
+      const memoriesToWrite = [];
 
       // Detect preferences
-      if (userMessage.toLowerCase().includes('prefer') || 
-          userMessage.toLowerCase().includes('like') ||
-          userMessage.toLowerCase().includes('want')) {
-        try {
-          await memory.write({
-            content: `User preference: ${userMessage}`,
-            type: 'preference',
-            tags: ['conversation', 'preference'],
-          });
-        } catch (writeError) {
-          console.log('Could not write preference memory:', writeError);
-        }
+      if (lowerMessage.includes('prefer') || lowerMessage.includes('like') || lowerMessage.includes('want')) {
+        memoriesToWrite.push({
+          content: `User preference: ${userMessage}`,
+          type: 'preference' as const,
+          tags: ['conversation', 'preference'],
+        });
       }
 
       // Detect facts about user
-      if (userMessage.toLowerCase().includes('i am') || 
-          userMessage.toLowerCase().includes("i'm") ||
-          userMessage.toLowerCase().includes('my name is')) {
+      if (lowerMessage.includes('i am') || lowerMessage.includes("i'm") || lowerMessage.includes('my name is')) {
+        memoriesToWrite.push({
+          content: `User info: ${userMessage}`,
+          type: 'fact' as const,
+          tags: ['conversation', 'personal'],
+        });
+      }
+
+      // Always store conversation context
+      memoriesToWrite.push({
+        content: `Conversation: User said "${userMessage.substring(0, 100)}"`,
+        type: 'conversation' as const,
+        tags: ['chat'],
+        meta: { response: aiResponse.substring(0, 100) },
+      });
+
+      // Write all memories sequentially with delay between writes
+      for (let i = 0; i < memoriesToWrite.length; i++) {
+        const memoryData = memoriesToWrite[i];
         try {
-          await memory.write({
-            content: `User info: ${userMessage}`,
-            type: 'fact',
-            tags: ['conversation', 'personal'],
-          });
+          console.log(`📝 [Memory] Writing ${memoryData.type} memory (${i + 1}/${memoriesToWrite.length})`);
+          await memory.write(memoryData);
+          console.log(`✅ [Memory] Successfully wrote ${memoryData.type} memory`);
+          
+          // Small delay to ensure lock is fully released
+          if (i < memoriesToWrite.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
         } catch (writeError) {
-          console.log('Could not write fact memory:', writeError);
+          console.log(`❌ [Memory] Could not write ${memoryData.type} memory:`, writeError);
         }
       }
 
-      // Store conversation context
-      try {
-        await memory.write({
-          content: `Conversation: User said "${userMessage.substring(0, 100)}"`,
-          type: 'conversation',
-          tags: ['chat'],
-          meta: { response: aiResponse.substring(0, 100) },
-        });
-      } catch (writeError) {
-        console.log('Could not write conversation memory:', writeError);
-      }
-
+      // Update stats after all writes
       try {
         await updateMemoryStats();
       } catch (statsError) {
@@ -216,7 +224,6 @@ export default function Index() {
       }
     } catch (error) {
       console.error('Failed to extract memories:', error);
-      // Don't show alert - this is background operation
     }
   };
 
@@ -300,7 +307,7 @@ export default function Index() {
   if (cactusLM.isDownloading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.accent.primary} />
         <Text style={styles.loadingText}>
           Downloading Cactus Model: {Math.round(cactusLM.downloadProgress * 100)}%
         </Text>
@@ -311,7 +318,7 @@ export default function Index() {
   if (!isMemoryReady) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.accent.primary} />
         <Text style={styles.loadingText}>Initializing Memory...</Text>
       </View>
     );
@@ -324,7 +331,10 @@ export default function Index() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🧠 EMP Chat</Text>
+        <View>
+          <Text style={styles.headerTitle}>Edge Memory</Text>
+          <Text style={styles.headerSubtitle}>Edge Memory Protocol v1.0</Text>
+        </View>
         <View style={styles.statsContainer}>
           <Text style={styles.statsText}>
             {memoryStats.total} memories • {memoryStats.preferences} preferences
@@ -392,31 +402,37 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.bg.primary,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.bg.primary,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: spacing.lg,
+    fontSize: typography.base,
+    color: colors.text.secondary,
   },
   header: {
-    backgroundColor: '#FFF',
+    backgroundColor: colors.bg.secondary,
     paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.border.subtle,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontSize: typography.xxl,
+    fontWeight: typography.bold,
+    color: colors.text.primary,
+  },
+  headerSubtitle: {
+    fontSize: typography.xs,
+    color: colors.text.tertiary,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -424,91 +440,95 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   statsText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: typography.sm,
+    color: colors.text.secondary,
   },
   clearButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    backgroundColor: '#FF3B30',
-    borderRadius: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.error,
+    borderRadius: radius.sm,
   },
   clearButtonText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.text.primary,
+    fontSize: typography.sm,
+    fontWeight: typography.semibold,
   },
   messagesContainer: {
     flex: 1,
-    padding: 16,
+    padding: spacing.lg,
   },
   messageBubble: {
     maxWidth: '80%',
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 12,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    marginBottom: spacing.md,
+    ...shadows.sm,
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.accent.primary,
   },
   assistantBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FFF',
+    backgroundColor: colors.bg.secondary,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border.subtle,
   },
   systemBubble: {
     alignSelf: 'center',
-    backgroundColor: '#FFF3CD',
+    backgroundColor: colors.accent.subtle,
     borderWidth: 1,
-    borderColor: '#FFE69C',
+    borderColor: colors.accent.primary + '40',
   },
   messageText: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: typography.base,
+    lineHeight: typography.base * typography.normal,
   },
   userText: {
-    color: '#FFF',
+    color: colors.text.primary,
   },
   assistantText: {
-    color: '#000',
+    color: colors.text.primary,
   },
   timestamp: {
-    fontSize: 10,
-    color: '#999',
-    marginTop: 4,
+    fontSize: typography.xs,
+    color: colors.text.tertiary,
+    marginTop: spacing.xs,
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#FFF',
+    padding: spacing.lg,
+    backgroundColor: colors.bg.secondary,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: colors.border.subtle,
   },
   input: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 16,
+    backgroundColor: colors.bg.tertiary,
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: typography.base,
+    color: colors.text.primary,
     maxHeight: 100,
-    marginRight: 8,
+    marginRight: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border.default,
   },
   sendButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    backgroundColor: colors.accent.primary,
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
     justifyContent: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: '#CCC',
+    backgroundColor: colors.bg.tertiary,
   },
   sendButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.text.primary,
+    fontSize: typography.base,
+    fontWeight: typography.semibold,
   },
 });

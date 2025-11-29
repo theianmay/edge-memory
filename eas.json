@@ -20,7 +20,10 @@
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "env": {
+          "ANDROID_ABI_FILTERS": "arm64-v8a"
+        }
       }
     },
     "production": {

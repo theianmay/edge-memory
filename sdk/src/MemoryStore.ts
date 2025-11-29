@@ -76,15 +76,20 @@ export class EdgeMemoryStore {
       this.filePath,
       {
         exists: (path) => this.platformHandler.fileExists(path),
+        read: (path) => this.platformHandler.readFile(path),
         write: (path, content) => this.platformHandler.writeFile(path, content),
-        delete: async (path) => {
-          // Platform handler doesn't have delete, so we write empty
-          // This is a workaround - in production, add delete to handler
-          await this.platformHandler.writeFile(path, '');
-        },
+        delete: (path) => this.platformHandler.deleteFile(path),
       },
       this.config.lockTimeout
     );
+
+    // Clean up any stale lock file from previous crashes
+    const lockPath = `${this.filePath}.lock`;
+    const lockExists = await this.platformHandler.fileExists(lockPath);
+    if (lockExists) {
+      console.warn('⚠️ [MemoryStore] Found stale lock file on init, removing...');
+      await this.platformHandler.deleteFile(lockPath);
+    }
 
     this.log('Initialized memory store at', this.filePath);
   }

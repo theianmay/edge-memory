@@ -9,16 +9,14 @@ import {
     View,
 } from 'react-native';
 import type { EdgeMemoryEntry } from '../sdk/src';
-import { createMemoryStore } from '../sdk/src';
+import { getMemoryStore } from './memoryStore';
+import { colors, getTypeColor, getTypeIcon, radius, shadows, spacing, typography } from './theme';
 
 export default function MemoriesScreen() {
   const [memories, setMemories] = useState<EdgeMemoryEntry[]>([]);
   const [filter, setFilter] = useState<'all' | 'preference' | 'fact' | 'conversation'>('all');
   const [refreshing, setRefreshing] = useState(false);
-  const [memory] = useState(() => createMemoryStore({
-    appId: 'com.caesiusbay.empchat',
-    debug: true,
-  }));
+  const memory = getMemoryStore();
 
   useEffect(() => {
     loadMemories();
@@ -84,32 +82,18 @@ export default function MemoriesScreen() {
   const exportMemories = async () => {
     try {
       const exported = await memory.export();
-      Alert.alert('Export', `Exported ${memories.length} memories to console`);
-      console.log('Exported memories:', exported);
+      Alert.alert(
+        'Exported to Console',
+        `${memories.length} memories exported as JSON.\nCheck the console/logs to view.`,
+        [{ text: 'OK' }]
+      );
+      console.log('📋 Exported memories (JSON):', exported);
     } catch (error) {
       Alert.alert('Error', 'Failed to export memories');
     }
   };
 
-  const getTypeColor = (type?: string) => {
-    switch (type) {
-      case 'preference': return '#007AFF';
-      case 'fact': return '#34C759';
-      case 'conversation': return '#FF9500';
-      case 'event': return '#FF3B30';
-      default: return '#8E8E93';
-    }
-  };
-
-  const getTypeIcon = (type?: string) => {
-    switch (type) {
-      case 'preference': return '⚙️';
-      case 'fact': return '📌';
-      case 'conversation': return '💬';
-      case 'event': return '📅';
-      default: return '📝';
-    }
-  };
+  // Type helpers moved to theme.ts
 
   return (
     <View style={styles.container}>
@@ -120,22 +104,33 @@ export default function MemoriesScreen() {
       </View>
 
       {/* Filters */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
-        {['all', 'preference', 'fact', 'conversation'].map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterButton, filter === f && styles.filterButtonActive]}
-            onPress={() => setFilter(f as any)}
+      <View style={styles.filterWrapper}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContainer}
+        >
+          {['all', 'preference', 'fact', 'conversation'].map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterButton, filter === f && styles.filterButtonActive]}
+              onPress={() => setFilter(f as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity 
+            style={styles.exportButton} 
+            onPress={exportMemories}
+            activeOpacity={0.7}
           >
-            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </Text>
+            <Text style={styles.exportButtonText}>📋 Export JSON</Text>
           </TouchableOpacity>
-        ))}
-        <TouchableOpacity style={styles.exportButton} onPress={exportMemories}>
-          <Text style={styles.exportButtonText}>Export</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       {/* Memories List */}
       <ScrollView
@@ -212,65 +207,70 @@ export default function MemoriesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.bg.primary,
   },
   header: {
-    backgroundColor: '#FFF',
+    backgroundColor: colors.bg.secondary,
     paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: colors.border.subtle,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontSize: typography.xxl,
+    fontWeight: typography.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: typography.sm,
+    color: colors.text.secondary,
+  },
+  filterWrapper: {
+    backgroundColor: colors.bg.secondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
+    paddingVertical: spacing.md,
   },
   filterContainer: {
-    backgroundColor: '#FFF',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: '#F5F5F5',
-    marginRight: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: colors.bg.tertiary,
+    marginRight: spacing.sm,
   },
   filterButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.accent.primary,
   },
   filterText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '600',
+    fontSize: typography.sm,
+    color: colors.text.secondary,
+    fontWeight: typography.semibold,
   },
   filterTextActive: {
-    color: '#FFF',
+    color: colors.text.primary,
   },
   exportButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: '#34C759',
-    marginLeft: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: colors.success,
+    marginLeft: spacing.sm,
   },
   exportButtonText: {
-    fontSize: 14,
-    color: '#FFF',
-    fontWeight: '600',
+    fontSize: typography.sm,
+    color: colors.text.primary,
+    fontWeight: typography.semibold,
   },
   memoriesList: {
     flex: 1,
-    padding: 16,
+    padding: spacing.lg,
   },
   emptyState: {
     alignItems: 'center',
@@ -278,31 +278,29 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
+    fontSize: typography.lg,
+    fontWeight: typography.semibold,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
   },
   emptyStateSubtext: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: typography.sm,
+    color: colors.text.tertiary,
   },
   memoryCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadows.md,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
   memoryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   memoryTypeContainer: {
     flexDirection: 'row',
@@ -310,85 +308,89 @@ const styles = StyleSheet.create({
   },
   memoryIcon: {
     fontSize: 20,
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   memoryTypeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
   },
   memoryTypeText: {
-    fontSize: 12,
-    color: '#FFF',
-    fontWeight: '600',
+    fontSize: typography.xs,
+    color: colors.text.primary,
+    fontWeight: typography.semibold,
     textTransform: 'capitalize',
   },
   deleteButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    backgroundColor: '#FF3B30',
-    borderRadius: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.error,
+    borderRadius: radius.sm,
   },
   deleteButtonText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.text.primary,
+    fontSize: typography.xs,
+    fontWeight: typography.semibold,
   },
   memoryContent: {
-    fontSize: 16,
-    lineHeight: 22,
-    color: '#000',
-    marginBottom: 12,
+    fontSize: typography.base,
+    lineHeight: typography.base * typography.normal,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
   },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   tag: {
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginRight: 6,
-    marginBottom: 6,
+    backgroundColor: colors.bg.tertiary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    marginRight: spacing.xs + 2,
+    marginBottom: spacing.xs + 2,
+    borderWidth: 1,
+    borderColor: colors.border.default,
   },
   tagText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: typography.xs,
+    color: colors.text.secondary,
   },
   memoryFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: colors.border.subtle,
   },
   memoryTimestamp: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: typography.xs,
+    color: colors.text.tertiary,
   },
   memorySource: {
-    fontSize: 10,
-    color: '#999',
+    fontSize: typography.xs - 1,
+    color: colors.text.tertiary,
     fontFamily: 'monospace',
   },
   metaContainer: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: '#F9F9F9',
-    borderRadius: 8,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.bg.tertiary,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border.default,
   },
   metaLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 4,
+    fontSize: typography.xs,
+    fontWeight: typography.semibold,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
   },
   metaText: {
-    fontSize: 11,
-    color: '#666',
+    fontSize: typography.xs - 1,
+    color: colors.text.secondary,
     fontFamily: 'monospace',
   },
 });
