@@ -1,0 +1,42 @@
+{
+  "name": "@edge-memory/core",
+  "version": "1.0.0",
+  "description": "Open standard SDK for shared AI memory across mobile applications",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "jest"
+  },
+  "keywords": [
+    "ai",
+    "memory",
+    "llm",
+    "local-first",
+    "react-native",
+    "expo",
+    "edge-computing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "react-native": ">=0.70.0",
+    "expo-file-system": ">=15.0.0",
+    "expo-document-picker": ">=11.0.0",
+    "@react-native-async-storage/async-storage": ">=1.17.0"
+  },
+  "devDependencies": {
+    "@types/react-native": "^0.72.0",
+    "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/edge-memory"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ]
+}
