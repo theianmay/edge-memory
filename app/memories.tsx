@@ -103,22 +103,33 @@ export default function MemoriesScreen() {
       </View>
 
       {/* Filters */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterContainer}>
-        {['all', 'preference', 'fact', 'conversation'].map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterButton, filter === f && styles.filterButtonActive]}
-            onPress={() => setFilter(f as any)}
+      <View style={styles.filterWrapper}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContainer}
+        >
+          {['all', 'preference', 'fact', 'conversation'].map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterButton, filter === f && styles.filterButtonActive]}
+              onPress={() => setFilter(f as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity 
+            style={styles.exportButton} 
+            onPress={exportMemories}
+            activeOpacity={0.7}
           >
-            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </Text>
+            <Text style={styles.exportButtonText}>Export</Text>
           </TouchableOpacity>
-        ))}
-        <TouchableOpacity style={styles.exportButton} onPress={exportMemories}>
-          <Text style={styles.exportButtonText}>Export</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       {/* Memories List */}
       <ScrollView
@@ -215,12 +226,16 @@ const styles = StyleSheet.create({
     fontSize: typography.sm,
     color: colors.text.secondary,
   },
-  filterContainer: {
+  filterWrapper: {
     backgroundColor: colors.bg.secondary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.subtle,
+    paddingVertical: spacing.md,
+  },
+  filterContainer: {
+    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   filterButton: {
     paddingHorizontal: spacing.lg,
