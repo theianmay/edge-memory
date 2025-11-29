@@ -29,7 +29,12 @@ export default function Index() {
   const scrollViewRef = useRef<ScrollView>(null);
   
   const cactusLM = useCactusLM();
-  const memoryRef = useRef(getMemoryStore());
+  
+  // Lazy initialize memory store (singleton) - guaranteed to be set before use
+  const memoryRef = useRef<ReturnType<typeof getMemoryStore>>(null as any);
+  if (!memoryRef.current) {
+    memoryRef.current = getMemoryStore();
+  }
 
   // Initialize memory and Cactus
   useEffect(() => {
@@ -194,12 +199,20 @@ export default function Index() {
         meta: { response: aiResponse.substring(0, 100) },
       });
 
-      // Write all memories sequentially (one lock acquisition)
-      for (const memoryData of memoriesToWrite) {
+      // Write all memories sequentially with delay between writes
+      for (let i = 0; i < memoriesToWrite.length; i++) {
+        const memoryData = memoriesToWrite[i];
         try {
+          console.log(`📝 [Memory] Writing ${memoryData.type} memory (${i + 1}/${memoriesToWrite.length})`);
           await memory.write(memoryData);
+          console.log(`✅ [Memory] Successfully wrote ${memoryData.type} memory`);
+          
+          // Small delay to ensure lock is fully released
+          if (i < memoriesToWrite.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
         } catch (writeError) {
-          console.log(`Could not write ${memoryData.type} memory:`, writeError);
+          console.log(`❌ [Memory] Could not write ${memoryData.type} memory:`, writeError);
         }
       }
 

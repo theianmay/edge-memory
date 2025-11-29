@@ -114,6 +114,9 @@ export interface PlatformAccessHandler {
   /** Check if file exists */
   fileExists(path: string): Promise<boolean>;
   
+  /** Delete file */
+  deleteFile(path: string): Promise<void>;
+  
   /** Create directory if it doesn't exist */
   ensureDirectory(path: string): Promise<void>;
 }

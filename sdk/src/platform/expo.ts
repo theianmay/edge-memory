@@ -97,6 +97,18 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
     return file.exists;
   }
 
+  async deleteFile(path: string): Promise<void> {
+    try {
+      const file = new File(path);
+      if (file.exists) {
+        await file.delete();
+      }
+    } catch (error) {
+      // File might not exist or already deleted, which is fine
+      console.warn('⚠️ [Platform] Delete file failed:', error);
+    }
+  }
+
   async ensureDirectory(path: string): Promise<void> {
     const dir = new Directory(path);
     if (!dir.exists) {

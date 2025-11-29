@@ -12,6 +12,7 @@ export class FileLockManager implements LockManager {
   private lockTimeout: number;
   private fileOps: {
     exists: (path: string) => Promise<boolean>;
+    read: (path: string) => Promise<string>;
     write: (path: string, content: string) => Promise<void>;
     delete: (path: string) => Promise<void>;
   };
@@ -20,6 +21,7 @@ export class FileLockManager implements LockManager {
     filePath: string,
     fileOps: {
       exists: (path: string) => Promise<boolean>;
+      read: (path: string) => Promise<string>;
       write: (path: string, content: string) => Promise<void>;
       delete: (path: string) => Promise<void>;
     },
@@ -34,6 +36,8 @@ export class FileLockManager implements LockManager {
     const startTime = Date.now();
     let attempt = 0;
 
+    console.log('🔒 [Lock] Attempting to acquire:', this.lockPath);
+
     while (true) {
       // Check if lock file exists
       const locked = await this.isLocked();
@@ -42,6 +46,7 @@ export class FileLockManager implements LockManager {
         // Try to create lock file
         try {
           await this.fileOps.write(this.lockPath, Date.now().toString());
+          console.log('✅ [Lock] Acquired after', Date.now() - startTime, 'ms, attempts:', attempt);
           return; // Successfully acquired lock
         } catch (error) {
           // Another process might have created the lock file
@@ -50,7 +55,9 @@ export class FileLockManager implements LockManager {
       }
 
       // Check timeout
-      if (Date.now() - startTime > this.lockTimeout) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed > this.lockTimeout) {
+        console.error('❌ [Lock] Timeout after', elapsed, 'ms. Attempts:', attempt);
         throw new LockTimeoutError(
           `Failed to acquire lock after ${this.lockTimeout}ms`
         );
@@ -59,6 +66,9 @@ export class FileLockManager implements LockManager {
       // Exponential backoff with jitter
       const backoff = Math.min(100 * Math.pow(2, attempt), 1000);
       const jitter = Math.random() * 50;
+      if (attempt % 5 === 0) { // Log every 5 attempts
+        console.log('⏳ [Lock] Waiting... attempt', attempt, 'elapsed:', elapsed, 'ms');
+      }
       await this.sleep(backoff + jitter);
       
       attempt++;
@@ -68,7 +78,9 @@ export class FileLockManager implements LockManager {
   async release(): Promise<void> {
     try {
       await this.fileOps.delete(this.lockPath);
+      console.log('🔓 [Lock] Released:', this.lockPath);
     } catch (error) {
+      console.warn('⚠️ [Lock] Release failed (might be already deleted):', error);
       // Lock file might not exist or already deleted
       // This is acceptable
     }
@@ -82,8 +94,30 @@ export class FileLockManager implements LockManager {
         return false;
       }
 
-      // TODO: Check if lock is stale (older than timeout)
-      // For now, we trust that locks are properly released
+      // Check if lock is stale (older than 2x timeout)
+      try {
+        const lockContent = await this.fileOps.read(this.lockPath);
+        const lockTime = parseInt(lockContent, 10);
+        
+        // Handle invalid/empty lock files
+        if (isNaN(lockTime) || lockTime === 0) {
+          console.warn('⚠️ [Lock] Invalid/empty lock file detected. Content:', JSON.stringify(lockContent), '. Removing...');
+          await this.fileOps.delete(this.lockPath);
+          return false;
+        }
+        
+        const age = Date.now() - lockTime;
+        
+        if (age > this.lockTimeout * 2) {
+          console.warn('⚠️ [Lock] Stale lock detected (age:', age, 'ms). Removing...');
+          await this.fileOps.delete(this.lockPath);
+          return false;
+        }
+      } catch (error) {
+        // Can't read lock file, assume it's valid
+        console.warn('⚠️ [Lock] Cannot read lock file, assuming locked');
+      }
+
       return true;
     } catch (error) {
       return false;
@@ -110,20 +144,27 @@ export class InMemoryLockManager implements LockManager {
     const startTime = Date.now();
     let attempt = 0;
 
+    console.log(' [Lock] Attempting to acquire lock');
+
     while (this.locked) {
-      if (Date.now() - startTime > this.lockTimeout) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed > this.lockTimeout) {
+        console.error(' [Lock] Timeout after', elapsed, 'ms. Attempts:', attempt);
         throw new LockTimeoutError(
           `Failed to acquire lock after ${this.lockTimeout}ms`
         );
       }
 
+      // Exponential backoff with jitter
       const backoff = Math.min(100 * Math.pow(2, attempt), 1000);
       const jitter = Math.random() * 50;
+      console.log(' [Lock] Waiting... attempt', attempt, 'backoff:', Math.round(backoff + jitter), 'ms');
       await this.sleep(backoff + jitter);
       
       attempt++;
     }
 
+    console.log(' [Lock] Acquired after', Date.now() - startTime, 'ms');
     this.locked = true;
   }
 
