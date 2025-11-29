@@ -325,7 +325,10 @@ export default function Index() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🧠 EMP Chat</Text>
+        <View>
+          <Text style={styles.headerTitle}>Edge Memory</Text>
+          <Text style={styles.headerSubtitle}>Edge Memory Protocol v1.0</Text>
+        </View>
         <View style={styles.statsContainer}>
           <Text style={styles.statsText}>
             {memoryStats.total} memories • {memoryStats.preferences} preferences
@@ -418,6 +421,11 @@ const styles = StyleSheet.create({
     fontSize: typography.xxl,
     fontWeight: typography.bold,
     color: colors.text.primary,
+  },
+  headerSubtitle: {
+    fontSize: typography.xs,
+    color: colors.text.tertiary,
+    marginTop: spacing.xs,
     marginBottom: spacing.sm,
   },
   statsContainer: {
