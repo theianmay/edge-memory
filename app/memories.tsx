@@ -9,17 +9,14 @@ import {
     View,
 } from 'react-native';
 import type { EdgeMemoryEntry } from '../sdk/src';
-import { createMemoryStore } from '../sdk/src';
+import { getMemoryStore } from './memoryStore';
 import { colors, getTypeColor, getTypeIcon, radius, shadows, spacing, typography } from './theme';
 
 export default function MemoriesScreen() {
   const [memories, setMemories] = useState<EdgeMemoryEntry[]>([]);
   const [filter, setFilter] = useState<'all' | 'preference' | 'fact' | 'conversation'>('all');
   const [refreshing, setRefreshing] = useState(false);
-  const [memory] = useState(() => createMemoryStore({
-    appId: 'com.caesiusbay.empchat',
-    debug: true,
-  }));
+  const memory = getMemoryStore();
 
   useEffect(() => {
     loadMemories();

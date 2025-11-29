@@ -1,18 +1,18 @@
 import { useCactusLM } from 'cactus-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { createMemoryStore } from '../sdk/src';
+import { getMemoryStore } from './memoryStore';
 import { colors, radius, shadows, spacing, typography } from './theme';
 
 interface Message {
@@ -29,10 +29,7 @@ export default function Index() {
   const scrollViewRef = useRef<ScrollView>(null);
   
   const cactusLM = useCactusLM();
-  const memoryRef = useRef(createMemoryStore({
-    appId: 'com.caesiusbay.empchat',
-    debug: true,
-  }));
+  const memoryRef = useRef(getMemoryStore());
 
   // Initialize memory and Cactus
   useEffect(() => {
@@ -165,51 +162,48 @@ export default function Index() {
 
   const extractMemoriesFromConversation = async (userMessage: string, aiResponse: string) => {
     try {
-      // Simple heuristics to extract memories
       const memory = memoryRef.current;
+      const lowerMessage = userMessage.toLowerCase();
+
+      // Collect all memories to write (avoids lock contention)
+      const memoriesToWrite = [];
 
       // Detect preferences
-      if (userMessage.toLowerCase().includes('prefer') || 
-          userMessage.toLowerCase().includes('like') ||
-          userMessage.toLowerCase().includes('want')) {
-        try {
-          await memory.write({
-            content: `User preference: ${userMessage}`,
-            type: 'preference',
-            tags: ['conversation', 'preference'],
-          });
-        } catch (writeError) {
-          console.log('Could not write preference memory:', writeError);
-        }
+      if (lowerMessage.includes('prefer') || lowerMessage.includes('like') || lowerMessage.includes('want')) {
+        memoriesToWrite.push({
+          content: `User preference: ${userMessage}`,
+          type: 'preference' as const,
+          tags: ['conversation', 'preference'],
+        });
       }
 
       // Detect facts about user
-      if (userMessage.toLowerCase().includes('i am') || 
-          userMessage.toLowerCase().includes("i'm") ||
-          userMessage.toLowerCase().includes('my name is')) {
+      if (lowerMessage.includes('i am') || lowerMessage.includes("i'm") || lowerMessage.includes('my name is')) {
+        memoriesToWrite.push({
+          content: `User info: ${userMessage}`,
+          type: 'fact' as const,
+          tags: ['conversation', 'personal'],
+        });
+      }
+
+      // Always store conversation context
+      memoriesToWrite.push({
+        content: `Conversation: User said "${userMessage.substring(0, 100)}"`,
+        type: 'conversation' as const,
+        tags: ['chat'],
+        meta: { response: aiResponse.substring(0, 100) },
+      });
+
+      // Write all memories sequentially (one lock acquisition)
+      for (const memoryData of memoriesToWrite) {
         try {
-          await memory.write({
-            content: `User info: ${userMessage}`,
-            type: 'fact',
-            tags: ['conversation', 'personal'],
-          });
+          await memory.write(memoryData);
         } catch (writeError) {
-          console.log('Could not write fact memory:', writeError);
+          console.log(`Could not write ${memoryData.type} memory:`, writeError);
         }
       }
 
-      // Store conversation context
-      try {
-        await memory.write({
-          content: `Conversation: User said "${userMessage.substring(0, 100)}"`,
-          type: 'conversation',
-          tags: ['chat'],
-          meta: { response: aiResponse.substring(0, 100) },
-        });
-      } catch (writeError) {
-        console.log('Could not write conversation memory:', writeError);
-      }
-
+      // Update stats after all writes
       try {
         await updateMemoryStats();
       } catch (statsError) {
@@ -217,7 +211,6 @@ export default function Index() {
       }
     } catch (error) {
       console.error('Failed to extract memories:', error);
-      // Don't show alert - this is background operation
     }
   };
 
