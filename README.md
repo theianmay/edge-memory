@@ -151,8 +151,15 @@ This is an open standard. Contributions welcome:
 
 ## License
 
-- **Protocol Specification**: CC0 1.0 Universal (Public Domain)
-- **Reference SDK**: MIT License
+This project uses a dual-license approach:
+
+- **Protocol Specification** (`spec/`): [CC0 1.0 Universal](spec/LICENSE-CC0) (Public Domain)
+  - The protocol specification is freely usable by anyone without restrictions
+  - Encourages maximum adoption and implementation across the ecosystem
+  
+- **Reference Implementation** (`sdk/`, `app/`): [MIT License](LICENSE)
+  - The code implementation requires attribution but is freely usable
+  - Compatible with commercial and open-source projects
 
 ## Roadmap
 
