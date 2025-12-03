@@ -2,6 +2,8 @@
 
 An open standard for sharing AI memory across mobile applications.
 
+> **Built for Arm64 Architecture** - Optimized for modern Arm-based mobile devices with on-device AI inference.
+
 ## Overview
 
 The Edge Memory Protocol (EMP) enables multiple apps from different developers to share a common memory store on mobile devices. All data stays local on the device, giving users complete control over their AI memory.
@@ -80,10 +82,12 @@ console.log(recent);
 
 ## Platform Support
 
+- **Architecture**: Arm64 (arm64-v8a) - optimized for modern mobile devices
 - **iOS**: Via Files app with security-scoped bookmarks
 - **Android**: Via standard Documents folder or Storage Access Framework
-- **React Native**: Reference implementation provided
+- **React Native**: Reference implementation provided (Expo SDK)
 - **Native**: Implement the spec in Swift/Kotlin
+- **AI Framework**: Cactus SDK for on-device inference (Qwen 3 - 0.6B)
 
 ## Documentation
 
@@ -93,12 +97,40 @@ console.log(recent);
 
 ## Development
 
+### Build Configuration
+
+The project is configured to build for **Arm64 architecture** (arm64-v8a):
+
+```json
+// eas.json
+{
+  "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk",
+        "env": {
+          "ANDROID_ABI_FILTERS": "arm64-v8a"
+        }
+      }
+    }
+  }
+}
+```
+
+This ensures the APK runs on modern Arm-based Android devices and leverages Arm-optimized AI inference via Cactus SDK.
+
 ### Build SDK
 
 ```bash
 cd sdk
 npm install
 npm run build
+```
+
+### Build Android APK
+
+```bash
+eas build --profile preview --platform android
 ```
 
 ### Run Example App
