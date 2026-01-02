@@ -4,6 +4,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Directory, File } from 'expo-file-system';
+import { StorageAccessFramework } from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import { AccessDeniedError, PlatformAccessHandler } from '../types';
 
@@ -65,6 +66,12 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
 
   async readFile(path: string): Promise<string> {
     try {
+      // Use StorageAccessFramework for Android content URIs
+      if (Platform.OS === 'android' && path.startsWith('content://')) {
+        return await StorageAccessFramework.readAsStringAsync(path);
+      }
+      
+      // Use regular File API for iOS and other paths
       const file = new File(path);
       if (!file.exists) {
         return '';
@@ -82,22 +89,81 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
   async appendFile(path: string, content: string): Promise<void> {
     // Expo doesn't have native append, so we read + write
     const existing = await this.readFile(path);
+    
+    // Use StorageAccessFramework for Android content URIs
+    if (Platform.OS === 'android' && path.startsWith('content://')) {
+      await StorageAccessFramework.writeAsStringAsync(path, existing + content);
+      return;
+    }
+    
     const file = new File(path);
     await file.write(existing + content);
   }
 
   async writeFile(path: string, content: string): Promise<void> {
+    console.log('✍️ [Platform] Writing to path:', path);
+    
+    // Use StorageAccessFramework for Android content URIs
+    if (Platform.OS === 'android' && path.startsWith('content://')) {
+      // Check if file exists, if not we need to create it first
+      const exists = await this.fileExists(path);
+      if (!exists) {
+        // Extract parent directory and filename from content URI
+        // URI format: content://.../tree/primary%3AEdgeMemory/document/primary%3AEdgeMemory%2Ffilename
+        const filename = path.split('%2F').pop() || path.split('/').pop() || 'unknown';
+        console.log('✍️ [Platform] File does not exist, creating:', filename);
+        
+        // Create the file first (SAF requires file to exist before writing)
+        const parentUri = this.bookmarkUri;
+        if (parentUri) {
+          const newFileUri = await StorageAccessFramework.createFileAsync(
+            parentUri,
+            filename.replace(/\.[^/.]+$/, ''), // Remove extension
+            'text/plain' // Use generic MIME type for lock files
+          );
+          console.log('✍️ [Platform] Created file:', newFileUri);
+          // Now write to the newly created file
+          await StorageAccessFramework.writeAsStringAsync(newFileUri, content);
+        } else {
+          throw new Error('No parent URI available to create file');
+        }
+      } else {
+        await StorageAccessFramework.writeAsStringAsync(path, content);
+      }
+      console.log('✍️ [Platform] Write complete (SAF)');
+      return;
+    }
+    
+    // Use regular File API for iOS and other paths
     const file = new File(path);
+    console.log('✍️ [Platform] File exists before write:', file.exists);
     await file.write(content);
+    console.log('✍️ [Platform] Write complete');
   }
 
   async fileExists(path: string): Promise<boolean> {
+    // For Android content URIs, try to read and catch error if doesn't exist
+    if (Platform.OS === 'android' && path.startsWith('content://')) {
+      try {
+        await StorageAccessFramework.readAsStringAsync(path);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    
     const file = new File(path);
     return file.exists;
   }
 
   async deleteFile(path: string): Promise<void> {
     try {
+      // Use StorageAccessFramework for Android content URIs
+      if (Platform.OS === 'android' && path.startsWith('content://')) {
+        await StorageAccessFramework.deleteAsync(path);
+        return;
+      }
+      
       const file = new File(path);
       if (file.exists) {
         await file.delete();
@@ -109,6 +175,12 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
   }
 
   async ensureDirectory(path: string): Promise<void> {
+    // Skip directory creation for content URIs (Android SAF)
+    // The directory already exists since user selected it via picker
+    if (path.startsWith('content://')) {
+      return;
+    }
+    
     const dir = new Directory(path);
     if (!dir.exists) {
       await dir.create();
@@ -123,8 +195,11 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
     }
     
     // The bookmark URI should point to the EdgeMemory folder
-    // We append the filename
-    return `${this.bookmarkUri}/${STANDARD_FILE}`;
+    // Remove trailing slash if present, then append the filename
+    const baseUri = this.bookmarkUri.endsWith('/') 
+      ? this.bookmarkUri.slice(0, -1) 
+      : this.bookmarkUri;
+    return `${baseUri}/${STANDARD_FILE}`;
   }
 
   private async requestIOSAccess(): Promise<boolean> {
@@ -151,9 +226,30 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
       throw new AccessDeniedError('No bookmark URI available');
     }
     
-    // The bookmark URI should point to the EdgeMemory folder
-    // We append the filename
-    return `${this.bookmarkUri}/${STANDARD_FILE}`;
+    // Check if file already exists in the directory
+    const files = await StorageAccessFramework.readDirectoryAsync(this.bookmarkUri);
+    console.log('📄 [Platform] Files in directory:', files);
+    
+    // Look for existing memory.jsonl file (check both with and without extension in URI)
+    const existingFile = files.find((uri: string) => 
+      uri.includes('memory.jsonl') || uri.endsWith('%2Fmemory.jsonl') || uri.endsWith('memory')
+    );
+    
+    if (existingFile) {
+      console.log('📄 [Platform] Found existing file:', existingFile);
+      return existingFile;
+    }
+    
+    // Create new file using StorageAccessFramework
+    // Use wildcard MIME type to prevent automatic extension addition
+    console.log('📄 [Platform] Creating new file in:', this.bookmarkUri);
+    const fileUri = await StorageAccessFramework.createFileAsync(
+      this.bookmarkUri,
+      'memory.jsonl', // Full filename with extension
+      '*/*' // Wildcard MIME type - no automatic extension
+    );
+    console.log('📄 [Platform] Created file URI:', fileUri);
+    return fileUri;
   }
 
   private async requestAndroidAccess(): Promise<boolean> {
@@ -163,6 +259,7 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
 
       // Save the bookmark
       const uri = directory.uri;
+      console.log('📁 [Platform] Selected directory URI:', uri);
       await AsyncStorage.setItem(BOOKMARK_KEY, uri);
       this.bookmarkUri = uri;
 
