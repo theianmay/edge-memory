@@ -3,7 +3,6 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as DocumentPicker from 'expo-document-picker';
 import { Directory, File } from 'expo-file-system';
 import { Platform } from 'react-native';
 import { AccessDeniedError, PlatformAccessHandler } from '../types';
@@ -130,18 +129,11 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
 
   private async requestIOSAccess(): Promise<boolean> {
     try {
-      // Ask user to select the EdgeMemory folder
-      const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*',
-        copyToCacheDirectory: false,
-      });
-
-      if (result.canceled) {
-        return false;
-      }
+      // Ask user to select the EdgeMemory folder using Directory picker
+      const directory = await Directory.pickDirectoryAsync();
 
       // Save the bookmark
-      const uri = result.assets[0].uri;
+      const uri = directory.uri;
       await AsyncStorage.setItem(BOOKMARK_KEY, uri);
       this.bookmarkUri = uri;
 
@@ -166,18 +158,11 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
 
   private async requestAndroidAccess(): Promise<boolean> {
     try {
-      // Ask user to select the EdgeMemory folder (same as iOS)
-      const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*',
-        copyToCacheDirectory: false,
-      });
-
-      if (result.canceled) {
-        return false;
-      }
+      // Ask user to select the EdgeMemory folder using Directory picker
+      const directory = await Directory.pickDirectoryAsync();
 
       // Save the bookmark
-      const uri = result.assets[0].uri;
+      const uri = directory.uri;
       await AsyncStorage.setItem(BOOKMARK_KEY, uri);
       this.bookmarkUri = uri;
 
