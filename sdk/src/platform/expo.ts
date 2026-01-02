@@ -4,7 +4,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
-import { Directory, File, Paths } from 'expo-file-system';
+import { Directory, File } from 'expo-file-system';
 import { Platform } from 'react-native';
 import { AccessDeniedError, PlatformAccessHandler } from '../types';
 
@@ -155,30 +155,31 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
   // Android-specific methods
 
   private async getAndroidFilePath(): Promise<string> {
-    if (this.bookmarkUri) {
-      // User has selected a custom location
-      return `${this.bookmarkUri}/${STANDARD_FILE}`;
+    if (!this.bookmarkUri) {
+      throw new AccessDeniedError('No bookmark URI available');
     }
-
-    // Use standard Documents location
-    const documentsDir = Paths.document.uri;
-    return `${documentsDir}${STANDARD_FOLDER}/${STANDARD_FILE}`;
+    
+    // The bookmark URI should point to the EdgeMemory folder
+    // We append the filename
+    return `${this.bookmarkUri}/${STANDARD_FILE}`;
   }
 
   private async requestAndroidAccess(): Promise<boolean> {
     try {
-      // On Android, we can use the standard Documents location
-      // or ask user to pick a folder
+      // Ask user to select the EdgeMemory folder (same as iOS)
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: false,
+      });
 
-      // Option 1: Use standard location (simpler)
-      const documentsDir = Paths.document.uri;
-      const edgeMemoryDir = `${documentsDir}${STANDARD_FOLDER}`;
-      
-      await this.ensureDirectory(edgeMemoryDir);
-      
-      // Save a marker that we've set up
-      await AsyncStorage.setItem(BOOKMARK_KEY, edgeMemoryDir);
-      this.bookmarkUri = edgeMemoryDir;
+      if (result.canceled) {
+        return false;
+      }
+
+      // Save the bookmark
+      const uri = result.assets[0].uri;
+      await AsyncStorage.setItem(BOOKMARK_KEY, uri);
+      this.bookmarkUri = uri;
 
       return true;
     } catch (error) {
