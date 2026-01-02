@@ -17,6 +17,7 @@ const STANDARD_FILE = 'memory.jsonl';
  */
 export class ExpoPlatformHandler implements PlatformAccessHandler {
   private bookmarkUri?: string;
+  private createdFileUris: Map<string, string> = new Map(); // Track created file URIs
 
   async getFilePath(): Promise<string> {
     if (Platform.OS === 'ios') {
@@ -108,20 +109,22 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
       // Check if file exists, if not we need to create it first
       const exists = await this.fileExists(path);
       if (!exists) {
-        // Extract parent directory and filename from content URI
-        // URI format: content://.../tree/primary%3AEdgeMemory/document/primary%3AEdgeMemory%2Ffilename
+        // Extract filename from content URI
         const filename = path.split('%2F').pop() || path.split('/').pop() || 'unknown';
         console.log('✍️ [Platform] File does not exist, creating:', filename);
         
         // Create the file first (SAF requires file to exist before writing)
         const parentUri = this.bookmarkUri;
         if (parentUri) {
+          // Use wildcard MIME type to preserve exact filename
           const newFileUri = await StorageAccessFramework.createFileAsync(
             parentUri,
-            filename.replace(/\.[^/.]+$/, ''), // Remove extension
-            'text/plain' // Use generic MIME type for lock files
+            filename, // Use full filename including extension
+            '*/*' // Wildcard MIME type - no automatic extension
           );
           console.log('✍️ [Platform] Created file:', newFileUri);
+          // Track the created file URI for later deletion
+          this.createdFileUris.set(path, newFileUri);
           // Now write to the newly created file
           await StorageAccessFramework.writeAsStringAsync(newFileUri, content);
         } else {
@@ -160,7 +163,10 @@ export class ExpoPlatformHandler implements PlatformAccessHandler {
     try {
       // Use StorageAccessFramework for Android content URIs
       if (Platform.OS === 'android' && path.startsWith('content://')) {
-        await StorageAccessFramework.deleteAsync(path);
+        // Check if we created this file and have a different URI for it
+        const actualUri = this.createdFileUris.get(path) || path;
+        await StorageAccessFramework.deleteAsync(actualUri);
+        this.createdFileUris.delete(path); // Clean up tracking
         return;
       }
       
