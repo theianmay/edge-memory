@@ -1,0 +1,22 @@
+# Source files (only ship compiled dist/)
+src/
+tsconfig.json
+
+# Tests
+**/*.test.ts
+**/*.spec.ts
+__tests__/
+coverage/
+
+# Development
+.vscode/
+.idea/
+*.log
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# CI/CD
+.github/
